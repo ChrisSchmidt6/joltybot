@@ -19,7 +19,7 @@ module.exports.create = () => {
         }).save(err => {
             if(err) console.log(err);
             else{
-            let cmds = require("./extendedCmds").getCommands({});
+            let cmds = require("./extended").getCommands({});
             let userCmds = ``;
             for (cmd in cmds) userCmds += `\`${cmd}\`, `;
             msg.channel.send(`${msg.member.nickname || msg.author.username}: You have enrolled! You now have access to the following additional commands:\n${userCmds.slice(0,-2)}\nTo get help with any of them, use the command __\`${Config.prefix}help <cmd>\`__`);
