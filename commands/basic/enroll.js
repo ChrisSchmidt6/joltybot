@@ -22,7 +22,7 @@ module.exports.create = () => {
             let cmds = require("./extended").getCommands({});
             let userCmds = ``;
             for (cmd in cmds) userCmds += `\`${cmd}\`, `;
-            msg.channel.send(`${msg.member.nickname || msg.author.username}: You have enrolled! You now have access to the following additional commands:\n${userCmds.slice(0,-2)}\nTo get help with any of them, use the command __\`${Config.prefix}help <cmd>\`__`);
+              msg.channel.send(`${msg.member.nickname || msg.author.username}: You have enrolled! You now have access to the following additional commands:\n${userCmds.slice(0,-2)}\nTo get help with any of them, use the command __\`${Config.prefix}help <cmd>\`__`);
             }
             return;
         });
