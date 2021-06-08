@@ -4,10 +4,13 @@ const Database = require("./db/Database");
 let _settings = Database.get("settings");
 
 module.exports = {
-  token: "",
+  //token: "", // Jolty (for production)
+  token: "", // Eevee (for development) [This is if you want to be able to test changes while an older version is still running]
+  devServer: "", // Server / Guild ID where the development happens, the bot's "home" Guild
+  suggestionChannel: "", // Channel ID of the channel where all suggestions are sent
   database: 'mongodb://localhost:27017/jolty',
   prefix: _settings.prefix,
-  owner: _settings.owner, // This would be I, muahahahaha!
-  gisEID: _settings.gisEID, // blanked out as you'll have to get your own gisEID
-  gisAPI: _settings.gisAPI // read line above, same applies here
+  owner: _settings.owner, // Make sure to change the owner's Discord ID in ./db/settings.json
+  gisEID: _settings.gisEID,
+  gisAPI: _settings.gisAPI
 }
