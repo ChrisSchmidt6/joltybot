@@ -10,10 +10,10 @@
   "author": "Chris Schmidt",
   "license": "UNLICENSED",
   "dependencies": {
-    "debug": "^4.1.1",
-    "discord.js": "^11.4.2",
-    "google-images": "^2.0.0",
-    "moment": "^2.17.1",
-    "mongoose": "^5.4.20"
+    "debug": "^4.3.1",
+    "discord.js": "^12.5.3",
+    "google-images": "^2.1.0",
+    "moment": "^2.29.1",
+    "mongoose": "^5.12.12"
   }
 }
