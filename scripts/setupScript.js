@@ -4,33 +4,15 @@ const Database = require("../db/Database");
 const db = require('../db');
 const Scripts = require("./");
 const Config = require("../config");
+const cmds = require('../commands');
 
-const Basic = require("../commands/basics");
-const Extended = require("../commands/extendedCmds");
-const Moderator = require("../commands/modCmds");
-const SuperMod = require("../commands/superModCmds");
-const Owner = require("../commands/ownerCmds");
+module.exports.try = async (msg) => {
 
-// ######################## Defining all the commands + ########################
-
-let cmds = {};
-cmds = Basic.getCommands(cmds);
-cmds = Extended.getCommands(cmds);
-cmds = Moderator.getCommands(cmds);
-cmds = SuperMod.getCommands(cmds);
-cmds = Owner.getCommands(cmds);
-
-// ######################## - Defining all the commands ########################
-
-module.exports.try = async msg => {
-
-  if(msg.author.bot) return;
+  if(msg.author.bot) return false;
   
   if(msg.content.slice(0, Config.prefix.length).toLowerCase() !== Config.prefix) return true;
 
   let rank = await Scripts.getRank(msg.author.id);
-
-  //if(Database.get("settings").blacklist.guilds.indexOf(msg.guild.id) > -1 && rank < 3) return;
 
   let blacklisted = await Scripts.getBlacklist("user", msg.author.id);
   if(blacklisted) return;
@@ -53,11 +35,14 @@ module.exports.try = async msg => {
     db.User.findOne({disID: msg.author.id}, {_id: 1}, (err, data) => {
       if(err){ console.log(err); return; }
       else{
+
+        let callback = err => {
+          msg.channel.send(`${msg.member.nickname || msg.author.username}: \`ERROR\`\n${err}`);
+          return;
+        }
+
         if(cmds[cmd].canUse(rank) && data){
-          cmds[cmd].execute(msg, args, err => {
-            msg.channel.send(`${msg.member.nickname || msg.author.username}: \`ERROR\`\n${err}`);
-            return true;
-          });
+          cmds[cmd].execute(msg, args, callback);
         }else{
           if(!cmds[cmd].canUse(rank)){
             msg.channel.send(`${msg.member.nickname || msg.author.username}: You do not have a high enough rank to use this command`);
@@ -66,10 +51,7 @@ module.exports.try = async msg => {
             msg.channel.send(`${msg.member.nickname || msg.author.username}: You are not enrolled in the extended Jolty program. To enroll, type \`${Config.prefix}enroll\` It's free, why not?`);
             return;
           }
-          cmds[cmd].execute(msg, args, err => {
-            msg.channel.send(`${msg.member.nickname || msg.author.username}: \`ERROR\`\n${err}`);
-            return;
-          });
+          cmds[cmd].execute(msg, args, callback);
         }
       }
     });
