@@ -41,15 +41,18 @@ db.TempPoll.deleteOne().exec(err => {
 });
 
 bot.on("ready", () => {
-  console.log(`Connected Jolty to ${ bot.guilds.size } servers successfully ...`);
+  console.log(`Connected Jolty to ${ bot.guilds.cache.size } servers successfully ...`);
   bot.user.setActivity(`${Config.prefix}help`);
   let _settings = Database.get("settings");
   _settings.currentDate = new Date();
   Database.update("settings", _settings);
 });
 
-bot.on("message", msg => {
-  if(setupScript.try(msg)) activityScript.check(msg);
+bot.on("message", async (msg) => {
+  let notCommand = await setupScript.try(msg); // Had to make this await because it would return a promise instead of a boolean
+  if(notCommand){
+    activityScript.check(msg); // If it isn't a command, run activity script
+  }
 });
 
 bot.on("disconnect", err => {
@@ -58,38 +61,7 @@ bot.on("disconnect", err => {
   else console.log(err);
 });
 
-// Handling error event since the bot has crashed due to the lack of it
+// Handling error event since the bot has previously crashed due to the lack of it
 bot.on('error', console.error);
 
 bot.login(Config.token);
-
-/*
-  let embed = new Discord.RichEmbed({
-    author: {
-      name: msg.author.username + "#" + msg.author.discriminator,
-      icon_url: msg.author.avatarURL
-    },
-    color: 0xFF0000,
-    title: "Title",
-    description: "Description",
-    fields: [
-      {
-        name: "Field 1",
-        value: "Field 1 value",
-        inline: true
-      },
-      {
-        name: "Field 2",
-        value: "Field 2 value",
-        inline: true
-      }
-    ],
-    thumbnail: {
-      url: "http://i.imgur.com/O7aZ1JY.png",
-      height:50,
-      width: 50
-    },
-    timestamp: new Date()
-  });
-  msg.channel.sendEmbed(embed);
-*/
