@@ -1,16 +1,27 @@
 `use strict`;
 
-const Config = require("../../config");
 const Command = require("../Command");
 
-let getError = cmd => {
-  return `The \`${cmd}\` command was not used properly. Try again or use the \`help\` command for more information`
-}
+const getError = require("../improperUsageError");
 
 module.exports.create = () => {
-    let cmd = new Command(`Get your Discord ID`, `id`, 1, false, (msg, args, callback) => {
-        if(args.length > 1){ callback(getError(args[0].slice(Config.prefix.length))); return; }
-        msg.channel.send(`${msg.member.nickname || msg.author.username}: Your Discord ID is \`${msg.author.id}\``);
-    });
-    return cmd;
-}
+  let cmd = new Command(
+    `Get your Discord ID`, // Description
+    `\`id\``, // Command examples
+    1, // Minimum rank
+    false, // 'Extended Jolty Program' command
+    true, // Direct Message enabled
+    // Command execution >>
+    (msg, args, callback) => {
+      if (args.length > 1) {
+        callback(getError(msg, args));
+        return;
+      }
+      msg.reply({
+        content: `Your Discord ID is \`${msg.author.id}\``,
+        allowedMentions: { repliedUser: false },
+      });
+    }
+  );
+  return cmd;
+};

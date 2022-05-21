@@ -1,10 +1,10 @@
 `use strict`;
 
-let Basic = require("./basic");
-let Extended = require("./extended");
-let Moderator = require("./mod");
-let SuperMod = require("./superMod");
-let Owner = require("./owner");
+const Basic = require("./basic");
+const Extended = require("./extended");
+const Moderator = require("./mod");
+const SuperMod = require("./superMod");
+const Owner = require("./owner");
 
 let cmds = {};
 

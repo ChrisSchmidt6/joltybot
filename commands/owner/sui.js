@@ -1,19 +1,28 @@
 `use strict`;
 
-const Config = require("../../config");
 const Command = require("../Command");
 
-let getError = cmd => {
-  return `The \`${cmd}\` command was not used properly. Try again or use the \`help\` command for more information`
-}
+const getError = require("../improperUsageError");
 
 module.exports.create = () => {
-    let cmd = new Command("Put the bot to sleep, forever (get it? suicide. hahahaha..?)", "sui", 4, false, (msg, args, callback) => {
-        if(args.length > 1){ callback(getError(args[0].slice(Config.prefix.length))); return; }
-        msg.channel.send("Good night, everyone.");
-        msg.client.destroy(() => {
-            process.exit();
-        });
-    });
-    return cmd;
-}
+  let cmd = new Command(
+    // Description >>
+    "Stop the bot with a command. Usually in emergencies or because of laziness",
+    "\`sui\`", // Command examples
+    4, // Minimum rank
+    false, // 'Extended Jolty Program' command
+    true, // Direct Message enabled
+    // Command execution >>
+    (msg, args, callback) => {
+      if (args.length > 1) {
+        callback(getError(msg, args));
+        return;
+      }
+      msg.channel.send("Good night everyone.").then(() => {
+        msg.client.destroy();
+        process.exit();
+      });
+    }
+  );
+  return cmd;
+};

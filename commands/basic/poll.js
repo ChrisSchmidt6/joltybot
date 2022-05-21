@@ -1,137 +1,144 @@
 `use strict`;
 
-const Discord = require('discord.js');
-const Config = require("../../config");
+const Discord = require("discord.js");
 const Command = require("../Command");
-const db = require('../../db');
 const Scripts = require("../../scripts");
 const getRandomID = require("../../scripts/getRandomID");
 
-let getError = cmd => {
-  return `The \`${cmd}\` command was not used properly. Try again or use the \`help\` command for more information`
-}
+const getError = require("../improperUsageError");
 
 module.exports.create = () => {
-    let cmd = new Command(`Get people to vote on things`, `poll create <question:option:option:option> (you can add as many options up to 5, 10 if you're enrolled in the Jolty extended program)\npoll view <poll ID>\npoll vote <poll ID> <option #>\npoll end <poll ID>`, 1, false, async (msg, args, callback) => {
-        if(args.length < 3){ callback(getError(args[0].slice(Config.prefix.length))); return; }
-        if(args[1] !== "create" && args[1] !== "view" && args[1] !== "vote" && args[1] !== "end"){ callback(`You must specify "create", "view", "vote", or "end"`); return; }
-        let user = await Scripts.getUser(msg.author.id);
-        if(!user) user = { enrolled: false };
-    
-        let endPoll = async pID => {
-          let temp = await Scripts.getTempPoll(pID);
-          embed = temp.embed;
-          let winningOption = [[0, 0]];
-          embed.fields = [{}];
-          for(var i = 0; i < temp.options.length; i++){
-            embed.fields.push({name: `${temp.options[i].votes} votes:`, value: temp.options[i].option, inline: true});
-            temp.options[i].optNum = (i + 1);
-            if(i === 0) winningOption = [temp.options[i]]
-            else
-              if(temp.options[i].votes === winningOption[0].votes) winningOption.push(temp.options[i]);
-              if(temp.options[i].votes > winningOption[0].votes) winningOption = [temp.options[i]];
+  let cmd = new Command(
+    `Get people to vote on things`, // Description
+    // Command examples >>
+    `\`poll <question:option:option:option>\` (you can add as many options up to 4, or 8 if you're enrolled in the Jolty extended program)`,
+    1, // Minimum rank
+    false, // 'Extended Jolty Program' command
+    false, // Direct Message enabled
+    // Command execution >>
+    async (msg, args, callback) => {
+      if (args.length < 2) {
+        callback(getError(msg, args));
+        return;
+      }
+      const user = !!(await Scripts.getUser(msg.author.id));
+
+      let options = msg.content.slice(7).split(":");
+      if (options.length < 3) {
+        callback(`You must have at least 2 options for people to vote on`);
+        return;
+      }
+      if (!user && options.length > 5) {
+        callback(`You are only allowed to set 4 voting options`);
+        return;
+      }
+      if (options.length > 9) {
+        callback(`You are only allowed to set 8 voting options`);
+        return;
+      }
+      const pID = "P" + getRandomID.fetch(5);
+      const reaction_numbers = [
+        "1️⃣",
+        "2️⃣",
+        "3️⃣",
+        "4️⃣",
+        "5️⃣",
+        "6️⃣",
+        "7️⃣",
+        "8️⃣",
+        "❌",
+      ];
+      const question = options[0];
+      options = options.slice(1); // Remove question from options
+      let embed = new Discord.MessageEmbed({
+        author: {
+          name: `${msg.author.tag}   has created poll ${pID}:`,
+          icon_url: msg.author.displayAvatarURL(),
+        },
+        color: 0xff00ff,
+        title: `**__${question}__**`,
+        description: `Vote by reacting with the corresponding number`,
+        fields: [],
+        thumbnail: {
+          url: "https://cdn.pixabay.com/photo/2016/10/18/18/19/question-mark-1750942_960_720.png",
+          height: 50,
+          width: 50,
+        },
+        timestamp: new Date(),
+      });
+
+      let expireMins = 15;
+      if (user) expireMins = 60;
+
+      for (let i = 0; i < options.length; i++) {
+        embed.fields.push({
+          name: `Option ${reaction_numbers[i]}`,
+          value: options[i],
+          inline: true,
+        });
+      }
+
+      embed.fields.push({
+        name: `-`,
+        value: `Poll creator can end the poll early by reacting with ❌\nOtherwise, the poll will end in ${expireMins} minutes`,
+        inline: false,
+      });
+
+      msg.channel
+        .send({
+          content: `Your poll will expire in ${expireMins} minutes`,
+          embeds: [embed],
+        })
+        .then((pollMessage) => {
+          for (var i = 0; i < options.length; i++) {
+            pollMessage.react(reaction_numbers[i]);
           }
-          if(winningOption.length === 1){
-            embed.fields[0] = {name: `**THE WINNER**`, value: `Option ${winningOption[0].optNum}: "${winningOption[0].option}" won with ${winningOption[0].votes} votes!`, inline: false};
-            embed.fields[winningOption[0].optNum].name = "__" + embed.fields[winningOption[0].optNum].name + "__";
-          }else{
-            for(var i = 0; i < winningOption.length; i++){
-              embed.fields[winningOption[i].optNum].name = "__" + embed.fields[winningOption[i].optNum].name + "__";
+          pollMessage.react("❌");
+          const filter = (reaction, user) =>
+            (user.id === pollMessage.author.id || !user.bot) &&
+            reaction_numbers.indexOf(reaction.emoji.name) > -1;
+          const votesCollector = pollMessage.createReactionCollector({
+            filter,
+            time: expireMins * 60 * 1000,
+          });
+          votesCollector.on("collect", (reaction, user) => {
+            if (reaction.emoji.name === "❌" && user.id === msg.author.id) {
+              votesCollector.stop();
             }
-            embed.fields[0] = {name: `**THE WINNER**`, value: `There is a ${winningOption.length} way tie at ${winningOption[0].votes} votes!`, inline: false}
-          }
-          delete embed.description;
-          msg.channel.send(`Poll ${pID} has expired and been deleted. Here are the results:`);
-          msg.channel.send({embed: embed});
-          msg.author.send(`Hey! Your poll has expired and been deleted. Here are the results:`);
-          msg.author.send({embed: embed});
-          db.TempPoll.deleteOne({_id: pID}, (err) => {
-            if(err) console.log(err);
           });
-        }
-    
-        if(args[1] === "vote"){
-          if(args.length !== 4){ callback(getError(args[0].slice(Config.prefix.length))); return; }
-          let pID = args[2];
-          let optionVote = args[3];
-          optionVote = parseInt(optionVote);
-          if(typeof optionVote !== 'number' || (optionVote % 1) !== 0 || optionVote <= 0){ callback(`You must enter a valid option #`); return; }
-          let temp = await Scripts.getTempPoll(pID);
-          if(!temp){ callback(`There is no poll with that ID`); return; }
-          if(temp.voters.indexOf(msg.author.id) > -1){ callback(`You have already voted on this poll`); return; }
-          if(temp.options.length < optionVote){ callback(`That poll doesn't have that option`); return; }
-          temp.voters.push(msg.author.id);
-          temp.options[optionVote - 1].votes++;
-          temp.markModified('options');
-          temp.save(err => {
-            if(err){ console.log(err); return; }
+          votesCollector.on("end", (collected, reason) => {
+            embed.description = `Results are in!`;
+            embed.timestamp = new Date();
+            embed.color = 0x00ff00;
+            delete embed.thumbnail;
+
+            embed.fields = collected
+              .filter((reaction) => reaction.emoji.name !== "❌")
+              .map((reaction) => {
+                let optionTitle = reaction.emoji.name;
+                // Subtracting one from count because of bot's reactions :
+                let count = reaction.count - 1;
+                let option = options[reaction_numbers.indexOf(optionTitle)];
+                return {
+                  name: `${count} votes for:`,
+                  value: `${optionTitle} - ${option}`,
+                  inline: true,
+                };
+              });
+
+            let reasonText = "The poll has ended for an unknown reason";
+            if (reason === "user") {
+              reasonText = "Poll creator has ended the poll";
+            } else if (reason === "time") reasonText = "Poll time has expired";
+            msg.channel.send({
+              content: `${reasonText}, here are the results:`,
+              embeds: [embed],
+            });
           });
-          msg.channel.send(`${msg.member.nickname || msg.author.username}: You voted for Option ${optionVote}: "${temp.options[optionVote - 1].option}" on poll ${pID}`);
-          return;
-        }else if(args[1] === "view"){
-          let pID = args[2];
-          let temp = await Scripts.getTempPoll(pID);
-          if(!temp){ callback(`There is no poll with that ID`); return; }
-          msg.channel.send({embed: temp.embed});
-          return;
-        }else if(args[1] === "end"){
-          let pID = args[2];
-          let temp = await Scripts.getTempPoll(pID);
-          if(!temp){ callback(`There is no poll with that ID`); return; }
-          if(!temp.authorID === msg.author.id){ callback(`You did not start Poll ${pID}`); return; }
-          clearTimeout(temp.timer);
-          endPoll(pID);
-          return;
-        }else{
-          let options = msg.content.slice(14).split(":");
-          if(options.length < 3){ callback(`You must have at least 2 options for people to vote on`); return; }
-          if(!user.enrolled && options.length > 5){ callback(`You are only allowed to set 4 voting options`); return; }
-          if(options.length > 9){ callback(`You are only allowed to set 8 voting options`); return; }
-          let pID = "P" + getRandomID.fetch(5);
-          let temp = new db.TempPoll({
-            _id: pID,
-            question: options[0],
-            authorID: msg.author.id,
-            options: [],
-            voters: []
-          });
-          for(var i = 1; i < options.length; i++){
-            temp.options.push({option: options[i], votes: 0});
-          }
-          let embed = new Discord.RichEmbed({
-            author: {
-              name: msg.author.username + "#" + msg.author.discriminator,
-              icon_url: msg.author.avatarURL
-            },
-            color: 0xFF00FF,
-            title: `Poll ${pID}: **__${temp.question}__**`,
-            description: `Vote by typing ${Config.prefix}poll vote ${pID} <option #>`,
-            fields: [],
-            thumbnail: {
-              url: "https://cdn.pixabay.com/photo/2016/10/18/18/19/question-mark-1750942_960_720.png",
-              height:50,
-              width: 50
-            },
-            timestamp: new Date()
-          });
-          for(var i = 0; i < temp.options.length; i++){
-            embed.fields.push({name: "Option " + (i + 1), value: temp.options[i].option, inline: true});
-          }
-          temp.embed = embed;
-          temp.save(err => {
-            if(err){ console.log(err); return; }
-          });
-          let expireMins = 15;
-          if(user.enrolled) expireMins = 60;
-          setTimeout(async function(pID){
-            let temp = await Scripts.getTempPoll(pID);
-            if(!temp) return;
-            endPoll(pID);
-          }, expireMins * 60 * 1000);
-          msg.channel.send(`${msg.member.nickname || msg.author.username}: Your poll will expire in ${expireMins} minutes`);
-          msg.channel.send({embed: embed});
-          return;
-        }
-    });
-    return cmd;
-}
+        })
+        .catch(console.error);
+      return;
+    }
+  );
+  return cmd;
+};

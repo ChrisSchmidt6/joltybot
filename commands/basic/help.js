@@ -1,34 +1,71 @@
 `use strict`;
 
-const Config = require("../../config");
+const Config = require('../../config');
 const Scripts = require("../../scripts");
 const Command = require("../Command");
 
-let getError = cmd => {
-  return `The \`${cmd}\` command was not used properly. Try again or use the \`help\` command for more information`
-}
+const getError = require("../improperUsageError");
 
 module.exports.create = (cmds) => {
-    let cmd = new Command(`Get general help for the bot or get information about a command`, `help\nhelp <command>`, 1, false, async (msg, args, callback) => {
-        if(args.length > 1){
-            if(args.length > 2){ callback(getError(args[0].slice(Config.prefix.length))); return; }
-            if(!cmds[args[1].toLowerCase()]){ callback(getError(args[0].slice(Config.prefix.length))); return; }
-            msg.channel.send(`${msg.member.nickname || msg.author.username}: The description of \`${args[1].toLowerCase()}\` is \`${cmds[args[1].toLowerCase()].description}\`.\nHow you should use the command:\n\`${cmds[args[1].toLowerCase()].usage}\``);
-            return;
+  let cmd = new Command(
+    `Get general help or get information on a command`, // Description
+    `\`help\`\n\`help <command name>\``, // Command examples
+    1, // Minimum rank
+    false, // 'Extended Jolty Program' command
+    true, // Direct Message enabled
+    // Command execution >>
+    async (msg, args, callback) => {
+      if (args.length > 1) {
+        if (args.length > 2) {
+          callback(getError(msg, args));
+          return;
         }
-        let userCmds = ``;
-        let rank = await Scripts.getRank(msg.author.id);
-        let user = await Scripts.getUser(msg.author.id);
-        if(rank < 2 && msg.member.hasPermission("KICK_MEMBERS")) rank = 2;
-        for (cmd in cmds) {
-            if(rank >= cmds[cmd].minRank && !cmds[cmd].extProgram) userCmds += `\`${cmd}\`, `;
-            if(rank >= cmds[cmd].minRank && cmds[cmd].extProgram && user){
-            userCmds += `\`${cmd}\`, `;
-            }
+        if (!cmds[args[1].toLowerCase()]) {
+          callback(`You must specify an existing command. To list your commands, use the \`help\` command.`);
+          return;
         }
-        if(user) userCmds = userCmds.replace("\`enroll\`, ", "");
-        msg.channel.send(`${msg.member.nickname || msg.author.username}: Contact a bot staff member for urgent help. Otherwise, to get help with a command use \`${Config.prefix}help <command>\`\n${user ? '' : `If you want to enroll in the extended Jolty program, type \`${Config.prefix}enroll\`\n`}You have access to the following commands:\n${userCmds.slice(0,-2)}`);
+        msg.reply({
+          content: `The description of \`${args[1].toLowerCase()}\` is \`${
+            cmds[args[1].toLowerCase()].description
+          }\`.${cmds[args[1]].dmEnabled ? '' : '\nThis command is not enabled in Direct Messages.'}\nHow you should use the command:\n${
+            cmds[args[1].toLowerCase()].usage
+          }`,
+          allowedMentions: { repliedUser: false },
+        });
         return;
-    });
-    return cmd;
-}
+      }
+      let userCmds = ``;
+      let rank = await Scripts.getRank(msg.author.id);
+      let user = await Scripts.getUser(msg.author.id);
+      if (rank < 2 && msg.member.permissions.has("KICK_MEMBERS")) rank = 2;
+      for (cmd in cmds) {
+        if (rank >= cmds[cmd].minRank && !cmds[cmd].extProgram) {
+          userCmds += `\`${cmd}\`, `;
+        }
+        if (rank >= cmds[cmd].minRank && cmds[cmd].extProgram && user) {
+          userCmds += `\`${cmd}\`, `;
+        }
+      }
+      if (user) userCmds = userCmds.replace("`enroll`, ", "");
+      if (msg.guildId !== null) {
+        msg.reply({
+          content: `Please check your Direct Messages :grinning:`,
+          allowedMentions: { repliedUser: false },
+        });
+      }
+      msg.author.send(
+        `You can use certain commands in Direct Messages or all commands in a server. Server commands require the \`${
+          Config.prefix
+        }\` prefix.\nFor help with a specific command, type \`${
+          Config.prefix
+        }help <command>\` in a server or \`help <command>\` in Direct Messages\n${
+          user
+            ? ""
+            : `If you want to enroll in the extended Jolty program, use the \`enroll\` command.\n`
+        }You have access to the following commands:\n${userCmds.slice(0, -2)}`
+      );
+      return;
+    }
+  );
+  return cmd;
+};

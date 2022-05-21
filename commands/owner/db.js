@@ -1,40 +1,64 @@
 `use strict`;
 
-const Config = require("../../config");
 const Command = require("../Command");
 const Scripts = require("../../scripts");
 
-let getError = cmd => {
-  return `The \`${cmd}\` command was not used properly. Try again or use the \`help\` command for more information`
-}
+const getError = require("../improperUsageError");
 
 module.exports.create = () => {
-    let cmd = new Command("Get DB info quickly (not used to make DB changes)", "db <collection> <search>", 4, false, async (msg, args, callback) => {
-        if(args.length < 3 || args.length > 3){ callback(getError(args[0].slice(Config.prefix.length))); return; }
-        try{
-          let collection = args[1].toLowerCase();
-          let search = args[2];
-          let returnInfo = '';
-          switch(collection){
-            case 'user':
-              returnInfo = await Scripts.getUser(search);
-              break;
-            case 'defs':
-              returnInfo = await Scripts.getDefs(search);
-              break;
-            case 'polls':
-              returnInfo = await Scripts.getPolls(search);
-              break;
-            default:
-              callback('Unable to find that collection in the DB');
-              return;
-          }
-          msg.channel.send(`\`\`\`js\n${returnInfo}\n\`\`\``);
-          return;
-        }catch(err){
-          msg.channel.send(`\`CODE ERROR\` \n\`${clean(err)}\``);
-          return;
+  let clean = (text) => {
+    if (typeof text === "string") {
+      return text
+        .replace(/`/g, "`" + String.fromCharCode(8203))
+        .replace(/@/g, "@" + String.fromCharCode(8203));
+    } else {
+      return text;
+    }
+  };
+
+  let cmd = new Command(
+    "Get DB info quickly (not used to make DB changes)", // Description
+    "\`db <collection> <search>\`", // Command examples
+    4, // Minimum rank
+    false, // 'Extended Jolty Program' command
+    true, // Direct Message enabled
+    // Command execution >>
+    async (msg, args, callback) => {
+      if (args.length < 3 || args.length > 3) {
+        callback(getError(msg, args));
+        return;
+      }
+      try {
+        let collection = args[1].toLowerCase();
+        let search = args[2];
+        let returnInfo = "";
+        switch (collection) {
+          case "user":
+            returnInfo = await Scripts.getUser(search);
+            break;
+          case "defs":
+            returnInfo = await Scripts.getDef(search);
+            break;
+          case "polls":
+            returnInfo = await Scripts.getPoll(search);
+            break;
+          default:
+            callback("Unable to find that collection in the DB");
+            return;
         }
-    });
-    return cmd;
-}
+        msg.reply({
+          content: `\`\`\`js\n${returnInfo}\n\`\`\``,
+          allowedMentions: { repliedUser: false },
+        });
+        return;
+      } catch (err) {
+        msg.reply({
+          content: `\`CODE ERROR\` \n\`${clean(err)}\``,
+          allowedMentions: { repliedUser: false },
+        });
+        return;
+      }
+    }
+  );
+  return cmd;
+};

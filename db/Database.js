@@ -13,13 +13,7 @@ module.exports.update = (name, db) =>{
 
 module.exports.get = (db) => {
   try {
-    if(db === "users") return JSON.parse(fs.readFileSync(`${__dirname}/users.json`, 'utf8'));
-    if(db === "defs") return JSON.parse(fs.readFileSync(`${__dirname}/definitions.json`, 'utf8'));
-    if(db === "blist") return JSON.parse(fs.readFileSync(`${__dirname}/blacklist.json`, 'utf8'));
-    if(db === "guilds") return JSON.parse(fs.readFileSync(`${__dirname}/guilds.json`, 'utf8'));
-    if(db === "polls") return JSON.parse(fs.readFileSync(`${__dirname}/polls.json`, 'utf8'));
     if(db === "settings") return JSON.parse(fs.readFileSync(`${__dirname}/settings.json`, 'utf8'));
-    if(db === "temp") return JSON.parse(fs.readFileSync(`${__dirname}/temp.json`, 'utf8'));
     return false;
   } catch (err) {
     return err;
