@@ -1,6 +1,9 @@
 # joltybot
 A discord bot I created for fun with a points and leveling system, some moderation commands, ranks, ability to gamble points, create and vote on polls, google image search, define words, set a bio, and more.
 
+# Instructions
+Duplicate myConfig.json and rename the copy to config.json  
+
 Make sure to change the following in config.json :  
 - token (your bot token)  
 - devServer (the ID of the Discord server you want to use for development/testing)  
